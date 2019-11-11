@@ -1,0 +1,18 @@
+from sympy import *
+
+salida = open("/tmp/salida.txt","w")
+init_printing()
+x,u,v =symbols('x u v')
+u = UnevaluatedExpr( 5)
+v = UnevaluatedExpr(sqrt(7*x-2))
+salida.write("u=%s\n" % latex(u))
+salida.write("u'=%s\n" % latex(diff(u)))
+salida.write("v=%s\n" % latex(v))
+salida.write("v'=%s\n" % latex(diff(v)))
+#resultado = sympify( v*diff(u)-u*diff(v), evaluate=False)
+resultado = sympify(diff(u/v), evaluate=False)
+salida.write("uv' -vu' = %s\n" % latex(resultado))
+salida.write("r=%s\n" % latex(resultado.doit()))
+#result = sp.diff('5/sqrt(5*x-6)','x')
+#salida.write(sp.latex(result))
+salida.close()
