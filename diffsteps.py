@@ -317,19 +317,19 @@ class DiffPrinter(object):
 
     def print_Power(self, rule):
         with self.new_step():
-            self.append("Apply the power rule: {0} goes to {1}".format(
+            self.append("Aplicando la regla de potencia: {0} se convierte en {1}".format(
                 self.format_math(rule.context),
                 self.format_math(diff(rule))))
 
     def print_Number(self, rule):
         with self.new_step():
-            self.append("The derivative of the constant {} is zero.".format(
+            self.append("La derivada de la constante {} es cero.".format(
                 self.format_math(rule.number)))
 
     def print_ConstantTimes(self, rule):
         with self.new_step():
-            self.append("The derivative of a constant times a function "
-                        "is the constant times the derivative of the function.")
+            self.append("La derivada de N veces una función "
+                        "es N veces la derivada de la función")
             with self.new_level():
                 self.print_rule(rule.substep)
             self.append("So, the result is: {}".format(
@@ -337,17 +337,17 @@ class DiffPrinter(object):
 
     def print_Add(self, rule):
         with self.new_step():
-            self.append("Differentiate {} term by term:".format(
+            self.append("Diferenciando {} termino por termino:".format(
                 self.format_math(rule.context)))
             with self.new_level():
                 for substep in rule.substeps:
                     self.print_rule(substep)
-            self.append("The result is: {}".format(
+            self.append("El resultado es: {}".format(
                 self.format_math(diff(rule))))
 
     def print_Mul(self, rule):
         with self.new_step():
-            self.append("Apply the product rule:".format(
+            self.append("Aplicando la regla del producto:".format(
                 self.format_math(rule.context)))
 
             fnames = map(lambda n: sympy.Function(n)(rule.symbol),
@@ -389,38 +389,38 @@ class DiffPrinter(object):
             qrule_right = sympy.ratsimp(sympy.diff(sympy.Function("f")(x) /
                                                    sympy.Function("g")(x)))
             qrule = sympy.Eq(qrule_left, qrule_right)
-            self.append("Apply the quotient rule, which is:")
+            self.append("Aplicando la regla del producto que es:")
             self.append(self.format_math_display(qrule))
-            self.append("{} and {}.".format(self.format_math(sympy.Eq(ff, f)),
+            self.append("{} y {}.".format(self.format_math(sympy.Eq(ff, f)),
                                             self.format_math(sympy.Eq(gg, g))))
-            self.append("To find {}:".format(self.format_math(ff.diff(rule.symbol))))
+            self.append("Para hallar {}:".format(self.format_math(ff.diff(rule.symbol))))
             with self.new_level():
                 self.print_rule(rule.numerstep)
-            self.append("To find {}:".format(self.format_math(gg.diff(rule.symbol))))
+            self.append("Para hallar {}:".format(self.format_math(gg.diff(rule.symbol))))
             with self.new_level():
                 self.print_rule(rule.denomstep)
-            self.append("Now plug in to the quotient rule:")
+            self.append("Sutituyendo en la regla del cociente:")
             self.append(self.format_math(diff(rule)))
 
     def print_Chain(self, rule):
         with self.new_step(), self.new_u_vars() as (u, du):
-            self.append("Let {}.".format(self.format_math(sympy.Eq(u, rule.inner))))
+            self.append("Sea {}.".format(self.format_math(sympy.Eq(u, rule.inner))))
             self.print_rule(replace_u_var(rule.substep, rule.u_var, u))
         with self.new_step():
             if isinstance(rule.innerstep, FunctionRule):
                 self.append(
-                    "Then, apply the chain rule. Multiply by {}:".format(
+                    "Entonces, aplicando la regla de la cadena. Multipicamos por {}:".format(
                         self.format_math(
                             sympy.Derivative(rule.inner, rule.symbol))))
                 self.append(self.format_math_display(diff(rule)))
             else:
                 self.append(
-                    "Then, apply the chain rule. Multiply by {}:".format(
+                    "Entonces, aplicando la regla de la cadena. Multipicamos por {}:".format(
                         self.format_math(
                             sympy.Derivative(rule.inner, rule.symbol))))
                 with self.new_level():
                     self.print_rule(rule.innerstep)
-                self.append("The result of the chain rule is:")
+                self.append("El resultado de la regla de la cadena:")
                 self.append(self.format_math_display(diff(rule)))
 
     def print_Trig(self, rule):
