@@ -1,3 +1,11 @@
+import sympy
+import collections
+
+from sympy.core.function import AppliedUndef, Derivative
+from sympy.functions.elementary.trigonometric import TrigonometricFunction
+from sympy.strategies.core import switch
+from sympy.core.compatibility import reduce
+
 from contextlib import contextmanager
 
 from mpmath.libmp.backend import basestring
@@ -9,11 +17,13 @@ def Rule(name, props=""):
     # GOTCHA: namedtuple class name not considered!
     def __eq__(self, other):
         return self.__class__ == other.__class__ and tuple.__eq__(self, other)
+
     __neq__ = lambda self, other: not __eq__(self, other)
     cls = collections.namedtuple(name, props + " context symbol")
     cls.__eq__ = __eq__
     cls.__ne__ = __neq__
     return cls
+
 
 def functionnames(numterms):
     if numterms == 2:
@@ -22,6 +32,7 @@ def functionnames(numterms):
         return ["f", "g", "h"]
     else:
         return ["f_{}".format(i) for i in range(numterms)]
+
 
 def replace_u_var(rule, old_u, new_u):
     d = rule._asdict()
@@ -39,6 +50,7 @@ def replace_u_var(rule, old_u, new_u):
                     result.append(item)
             d[field] = result
     return rule.__class__(**d)
+
 
 # def replace_all_u_vars(rule, replacements=None):
 #     if replacements is None:
@@ -81,9 +93,11 @@ class Printer(object):
         yield self.level
         self.lines.append('\n')
 
+
 class LaTeXPrinter(Printer):
     def format_math(self, math):
         return latex(math)
+
 
 class HTMLPrinterP(LaTeXPrinter):
     def __init__(self):
@@ -130,20 +144,13 @@ class HTMLPrinterP(LaTeXPrinter):
 
     def append_header(self, text):
         self.lines.append(' ' * 4 * (self.level + 1) + '<h2>{}</h2>'.format(text))
+
+
 ########################################################3
-
-import sympy
-import collections
-
-
-from sympy.core.function import AppliedUndef
-from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.strategies.core import switch
-from sympy.core.compatibility import reduce
-
 
 def Rule(name, props=""):
     return collections.namedtuple(name, props + " context symbol")
+
 
 ConstantRule = Rule("ConstantRule", "number")
 ConstantTimesRule = Rule("ConstantTimesRule", "constant other substep")
@@ -163,12 +170,16 @@ RewriteRule = Rule("RewriteRule", "rewritten substep")
 DerivativeInfo = collections.namedtuple('DerivativeInfo', 'expr symbol')
 
 evaluators = {}
+
+
 def evaluates(rule):
     def _evaluates(func):
         func.rule = rule
         evaluators[rule] = func
         return func
+
     return _evaluates
+
 
 def power_rule(derivative):
     expr, symbol = derivative.expr, derivative.symbol
@@ -201,14 +212,17 @@ def power_rule(derivative):
     else:
         return DontKnowRule(expr, symbol)
 
+
 def add_rule(derivative):
     expr, symbol = derivative.expr, derivative.symbol
     return AddRule([diff_steps(arg, symbol) for arg in expr.args],
                    expr, symbol)
 
+
 def constant_rule(derivative):
     expr, symbol = derivative.expr, derivative.symbol
     return ConstantRule(expr, expr, symbol)
+
 
 def mul_rule(derivative):
     expr, symbol = derivative
@@ -227,6 +241,7 @@ def mul_rule(derivative):
                        diff_steps(denominator, symbol), expr, symbol)
 
     return MulRule(terms, [diff_steps(g, symbol) for g in terms], expr, symbol)
+
 
 def trig_rule(derivative):
     expr, symbol = derivative
@@ -274,6 +289,7 @@ def trig_rule(derivative):
     else:
         return DontKnowRule(f, symbol)
 
+
 def exp_rule(derivative):
     expr, symbol = derivative
     exp = expr.args[0]
@@ -284,6 +300,7 @@ def exp_rule(derivative):
         f = sympy.exp(u)
         return ChainRule(ExpRule(f, sympy.E, f, u),
                          exp, u, diff_steps(exp, symbol), expr, symbol)
+
 
 def log_rule(derivative):
     expr, symbol = derivative
@@ -299,31 +316,38 @@ def log_rule(derivative):
             return ChainRule(LogRule(u, base, sympy.log(u, base), u),
                              arg, u, diff_steps(arg, symbol), expr, symbol)
 
+
 def function_rule(derivative):
     return FunctionRule(derivative.expr, derivative.symbol)
+
 
 @evaluates(ConstantRule)
 def eval_constant(*args):
     return 0
 
+
 @evaluates(ConstantTimesRule)
 def eval_constanttimes(constant, other, substep, expr, symbol):
     return constant * diff(substep)
+
 
 @evaluates(AddRule)
 def eval_add(substeps, expr, symbol):
     results = [diff(step) for step in substeps]
     return sum(results)
 
+
 @evaluates(DivRule)
 def eval_div(numer, denom, numerstep, denomstep, expr, symbol):
     d_numer = diff(numerstep)
     d_denom = diff(denomstep)
-    return (denom * d_numer - numer * d_denom) / (denom **2)
+    return (denom * d_numer - numer * d_denom) / (denom ** 2)
+
 
 @evaluates(ChainRule)
 def eval_chain(substep, inner, u_var, innerstep, expr, symbol):
     return diff(substep).subs(u_var, inner) * diff(innerstep)
+
 
 @evaluates(PowerRule)
 @evaluates(ExpRule)
@@ -352,6 +376,7 @@ def eval_default(*args):
     rule = func.func(*substitutions).diff(symbol)
     return rule.subs(mapping)
 
+
 @evaluates(MulRule)
 def eval_mul(terms, substeps, expr, symbol):
     diffs = list(map(diff, substeps))
@@ -365,17 +390,21 @@ def eval_mul(terms, substeps, expr, symbol):
         result += subresult
     return result
 
+
 @evaluates(TrigRule)
 def eval_default_trig(*args):
     return sympy.trigsimp(eval_default(*args))
+
 
 @evaluates(RewriteRule)
 def eval_rewrite(rewritten, substep, expr, symbol):
     return diff(substep)
 
+
 @evaluates(AlternativeRule)
 def eval_alternative(alternatives, expr, symbol):
     return diff(alternatives[1])
+
 
 def diff_steps(expr, symbol):
     deriv = DerivativeInfo(expr, symbol)
@@ -404,11 +433,13 @@ def diff_steps(expr, symbol):
         'constant': constant_rule
     })(deriv)
 
+
 def diff(rule):
     try:
         return evaluators[rule.__class__](*rule)
     except KeyError:
         raise ValueError("Cannot evaluate derivative")
+
 
 class DiffPrinter(object):
     def __init__(self, rule):
@@ -483,7 +514,7 @@ class DiffPrinter(object):
                 self.format_math(rule.context)))
 
             fnames = list(map(lambda n: sympy.Function(n)(rule.symbol),
-                         functionnames(len(rule.terms))))
+                              functionnames(len(rule.terms))))
             derivatives = list(map(lambda f: sympy.Derivative(f, rule.symbol), fnames))
             ruleform = []
             for index in range(len(rule.terms)):
@@ -495,9 +526,9 @@ class DiffPrinter(object):
                         buf.append(fnames[i])
                 ruleform.append(reduce(lambda a, b: a * b, buf))
             self.append(self.format_math_display(
-                sympy.Eq(sympy.Derivative(reduce(lambda a,b: a*b, fnames),
-                                        rule.symbol),
-                       sum(ruleform))))
+                sympy.Eq(sympy.Derivative(reduce(lambda a, b: a * b, fnames),
+                                          rule.symbol),
+                         sum(ruleform))))
 
             for fname, deriv, term, substep in zip(fnames, derivatives,
                                                    rule.terms, rule.substeps):
@@ -524,7 +555,7 @@ class DiffPrinter(object):
             self.append("Aplicando la regla del cociente que es:")
             self.append(self.format_math_display(qrule))
             self.append("{} y {}.".format(self.format_math(sympy.Eq(ff, f)),
-                                            self.format_math(sympy.Eq(gg, g))))
+                                          self.format_math(sympy.Eq(gg, g))))
             self.append("Para hallar {}:".format(self.format_math(ff.diff(rule.symbol))))
             with self.new_level():
                 self.print_rule(rule.numerstep)
@@ -578,7 +609,7 @@ class DiffPrinter(object):
             else:
                 self.append(
                     self.format_math(sympy.Eq(sympy.Derivative(rule.f, rule.symbol),
-                                            diff(rule))))
+                                              diff(rule))))
 
     def print_Log(self, rule):
         with self.new_step():
@@ -593,7 +624,7 @@ class DiffPrinter(object):
                 self.append("La derivada de {} es {}.".format(
                     self.format_math(sympy.log(rule.symbol, rule.base,
                                                evaluate=False)),
-                    self.format_math(1/(rule.arg * sympy.ln(rule.base)))))
+                    self.format_math(1 / (rule.arg * sympy.ln(rule.base)))))
                 self.append("Por lo tanto {}".format(
                     self.format_math(sympy.Eq(
                         sympy.Derivative(rule.context, rule.symbol),
@@ -618,13 +649,14 @@ class DiffPrinter(object):
             self.append("Trivial:")
             self.append(self.format_math_display(
                 sympy.Eq(sympy.Derivative(rule.context, rule.symbol),
-                       diff(rule))))
+                         diff(rule))))
 
     def print_DontKnow(self, rule):
         with self.new_step():
             self.append("Don't know the steps in finding this derivative.")
             self.append("But the derivative is")
             self.append(self.format_math_display(diff(rule)))
+
 
 class HTMLPrinter(DiffPrinter, HTMLPrinterP):
     def __init__(self, rule):
@@ -664,17 +696,19 @@ class HTMLPrinter(DiffPrinter, HTMLPrinterP):
         self.append(self.format_math_display(answer))
         return '\n'.join(self.lines)
 
+
 def print_html_steps(function, symbol):
     a = HTMLPrinter(diff_steps(function, symbol))
     return a.finalize()
 
 
-
-
 ##MAIN##
+
+salida = open("/tmp/salida.txt","w")
 x = symbols('x')
-#expr = parse_latex(r" 6x-\frac{3}{9x-6} ")
+# expr = parse_latex(r" 6x-\frac{3}{9x-6} ")
 expr = parse_latex(r"x\tan{\sqrt{x}}")
-print(expr)
+salida.write("Sea: $$%s$$<br>" % latex(Derivative(expr)))
 solucion = print_html_steps(expr, x)
-print(solucion)
+salida.write(solucion)
+salida.close()
