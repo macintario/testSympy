@@ -7,7 +7,7 @@ from stepprinter import functionnames, replace_u_var
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.strategies.core import switch, identity
-
+from sympy.core.compatibility import reduce
 
 
 def Rule(name, props=""):
@@ -222,7 +222,7 @@ def eval_default(*args):
 
 @evaluates(MulRule)
 def eval_mul(terms, substeps, expr, symbol):
-    diffs = map(diff, substeps)
+    diffs = list(map(diff, substeps))
 
     result = sympy.S.Zero
     for i in range(len(terms)):
@@ -317,7 +317,7 @@ class DiffPrinter(object):
 
     def print_Power(self, rule):
         with self.new_step():
-            self.append("Aplicando la regla de potencia: {0} se convierte en {1}".format(
+            self.append("Aplicando la regla de potencia: {0} se obtiene {1}".format(
                 self.format_math(rule.context),
                 self.format_math(diff(rule))))
 
@@ -332,7 +332,7 @@ class DiffPrinter(object):
                         "es N veces la derivada de la función")
             with self.new_level():
                 self.print_rule(rule.substep)
-            self.append("So, the result is: {}".format(
+            self.append("Así, el resultado es: {}".format(
                 self.format_math(diff(rule))))
 
     def print_Add(self, rule):
@@ -350,9 +350,9 @@ class DiffPrinter(object):
             self.append("Aplicando la regla del producto:".format(
                 self.format_math(rule.context)))
 
-            fnames = map(lambda n: sympy.Function(n)(rule.symbol),
-                         functionnames(len(rule.terms)))
-            derivatives = map(lambda f: sympy.Derivative(f, rule.symbol), fnames)
+            fnames = list(map(lambda n: sympy.Function(n)(rule.symbol),
+                         functionnames(len(rule.terms))))
+            derivatives = list(map(lambda f: sympy.Derivative(f, rule.symbol), fnames))
             ruleform = []
             for index in range(len(rule.terms)):
                 buf = []
@@ -361,7 +361,7 @@ class DiffPrinter(object):
                         buf.append(derivatives[i])
                     else:
                         buf.append(fnames[i])
-                ruleform.append(reduce(lambda a,b: a*b, buf))
+                ruleform.append(reduce(lambda a, b: a * b, buf))
             self.append(self.format_math_display(
                 sympy.Eq(sympy.Derivative(reduce(lambda a,b: a*b, fnames),
                                         rule.symbol),
@@ -369,7 +369,7 @@ class DiffPrinter(object):
 
             for fname, deriv, term, substep in zip(fnames, derivatives,
                                                    rule.terms, rule.substeps):
-                self.append("{}; to find {}:".format(
+                self.append("{}; para hallar {}:".format(
                     self.format_math(sympy.Eq(fname, term)),
                     self.format_math(deriv)
                 ))
@@ -389,7 +389,7 @@ class DiffPrinter(object):
             qrule_right = sympy.ratsimp(sympy.diff(sympy.Function("f")(x) /
                                                    sympy.Function("g")(x)))
             qrule = sympy.Eq(qrule_left, qrule_right)
-            self.append("Aplicando la regla del producto que es:")
+            self.append("Aplicando la regla del cociente que es:")
             self.append(self.format_math_display(qrule))
             self.append("{} y {}.".format(self.format_math(sympy.Eq(ff, f)),
                                             self.format_math(sympy.Eq(gg, g))))
@@ -426,13 +426,13 @@ class DiffPrinter(object):
     def print_Trig(self, rule):
         with self.new_step():
             if isinstance(rule.f, sympy.sin):
-                self.append("The derivative of sine is cosine:")
+                self.append("La derivada del seno es el coseno:")
             elif isinstance(rule.f, sympy.cos):
-                self.append("The derivative of cosine is negative sine:")
+                self.append("La derivada del coseno es el negativo del seno:")
             elif isinstance(rule.f, sympy.sec):
-                self.append("The derivative of secant is secant times tangent:")
+                self.append("La derivada de la secante es secante por tangente:")
             elif isinstance(rule.f, sympy.csc):
-                self.append("The derivative of cosecant is negative cosecant times cotangent:")
+                self.append("La derivada de la cosecante es el negativo de la cosecante por la cotangente:")
             self.append("{}".format(
                 self.format_math_display(sympy.Eq(
                     sympy.Derivative(rule.f, rule.symbol),
@@ -441,7 +441,7 @@ class DiffPrinter(object):
     def print_Exp(self, rule):
         with self.new_step():
             if rule.base == sympy.E:
-                self.append("The derivative of {} is itself.".format(
+                self.append("La derivada de {} es ella misma.".format(
                     self.format_math(sympy.exp(rule.symbol))))
             else:
                 self.append(
@@ -451,32 +451,32 @@ class DiffPrinter(object):
     def print_Log(self, rule):
         with self.new_step():
             if rule.base == sympy.E:
-                self.append("The derivative of {} is {}.".format(
+                self.append("La derivada de {} es {}.".format(
                     self.format_math(rule.context),
                     self.format_math(diff(rule))
                 ))
             else:
                 # This case shouldn't come up often, seeing as SymPy
                 # automatically applies the change-of-base identity
-                self.append("The derivative of {} is {}.".format(
+                self.append("La derivada de {} es {}.".format(
                     self.format_math(sympy.log(rule.symbol, rule.base,
                                                evaluate=False)),
                     self.format_math(1/(rule.arg * sympy.ln(rule.base)))))
-                self.append("So {}".format(
+                self.append("Por lo tanto {}".format(
                     self.format_math(sympy.Eq(
                         sympy.Derivative(rule.context, rule.symbol),
                         diff(rule)))))
 
     def print_Alternative(self, rule):
         with self.new_step():
-            self.append("There are multiple ways to do this derivative.")
-            self.append("One way:")
+            self.append("Hay muchas formas de efectuar la derivada.")
+            self.append("Una forma:")
             with self.new_level():
                 self.print_rule(rule.alternatives[0])
 
     def print_Rewrite(self, rule):
         with self.new_step():
-            self.append("Rewrite the function to be differentiated:")
+            self.append("Reescribimos la función para ser derivada:")
             self.append(self.format_math_display(
                 sympy.Eq(rule.context, rule.rewritten)))
             self.print_rule(rule.substep)
@@ -509,10 +509,10 @@ class HTMLPrinter(DiffPrinter, stepprinter.HTMLPrinter):
         else:
             self.alternative_functions_printed.add(rule.context.func)
             with self.new_step():
-                self.append("There are multiple ways to do this derivative.")
+                self.append("Hay muchas formas de efectuar la derivada.")
                 for index, r in enumerate(rule.alternatives[1:]):
                     with self.new_collapsible():
-                        self.append_header("Method #{}".format(index + 1))
+                        self.append_header("Método #{}".format(index + 1))
                         with self.new_level():
                             self.print_rule(r)
 
@@ -523,12 +523,12 @@ class HTMLPrinter(DiffPrinter, stepprinter.HTMLPrinter):
             if simp != answer:
                 answer = simp
                 with self.new_step():
-                    self.append("Now simplify:")
+                    self.append("Simplificando:")
                     self.append(self.format_math_display(simp))
         self.lines.append('</ol>')
         self.lines.append('<hr/>')
         self.level = 0
-        self.append('The answer is:')
+        self.append('La respuesta es:')
         self.append(self.format_math_display(answer))
         return '\n'.join(self.lines)
 
