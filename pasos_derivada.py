@@ -1,10 +1,7 @@
-import sympy
-import collections
 from contextlib import contextmanager
 
 from mpmath.libmp.backend import basestring
-from sympy import latex
-from sympy import symbols
+from sympy import latex, symbols
 from sympy.parsing.latex import parse_latex
 
 
@@ -88,9 +85,9 @@ class LaTeXPrinter(Printer):
     def format_math(self, math):
         return latex(math)
 
-class HTMLPrinter(LaTeXPrinter):
+class HTMLPrinterP(LaTeXPrinter):
     def __init__(self):
-        super(HTMLPrinter, self).__init__()
+        super(HTMLPrinterP, self).__init__()
         self.lines = ['<ol>']
 
     def format_math(self, math):
@@ -133,16 +130,15 @@ class HTMLPrinter(LaTeXPrinter):
 
     def append_header(self, text):
         self.lines.append(' ' * 4 * (self.level + 1) + '<h2>{}</h2>'.format(text))
+########################################################3
 
 import sympy
 import collections
 
-import stepprinter
-from stepprinter import functionnames, replace_u_var
 
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.strategies.core import switch, identity
+from sympy.strategies.core import switch
 from sympy.core.compatibility import reduce
 
 
@@ -630,10 +626,10 @@ class DiffPrinter(object):
             self.append("But the derivative is")
             self.append(self.format_math_display(diff(rule)))
 
-class HTMLPrinter(DiffPrinter, stepprinter.HTMLPrinter):
+class HTMLPrinter(DiffPrinter, HTMLPrinterP):
     def __init__(self, rule):
         self.alternative_functions_printed = set()
-        stepprinter.HTMLPrinter.__init__(self)
+        HTMLPrinterP.__init__(self)
         DiffPrinter.__init__(self, rule)
 
     def print_Alternative(self, rule):
@@ -671,6 +667,8 @@ class HTMLPrinter(DiffPrinter, stepprinter.HTMLPrinter):
 def print_html_steps(function, symbol):
     a = HTMLPrinter(diff_steps(function, symbol))
     return a.finalize()
+
+
 
 
 ##MAIN##
