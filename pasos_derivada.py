@@ -704,11 +704,11 @@ def print_html_steps(function, symbol):
 
 ##MAIN##
 
-salida = open("/tmp/salida.txt","w")
+salida = open("/tmp/salida.txt", "w")
 x = symbols('x')
 # expr = parse_latex(r" 6x-\frac{3}{9x-6} ")
 expr = parse_latex(r"x\tan{\sqrt{x}}")
-salida.write("Sea: $$%s$$<br>" % latex(Derivative(expr)))
+salida.write("Obtener: $$%s$$<br>" % latex(Derivative(expr)))
 solucion = print_html_steps(expr, x)
 salida.write(solucion)
 salida.close()
