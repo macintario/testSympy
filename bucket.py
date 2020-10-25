@@ -6,12 +6,17 @@ from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.strategies.core import switch
 from sympy.core.compatibility import reduce
 from sympy import factor
+from sympy import simplify
 from sympy import Symbol
 from sympy import pi
 from sympy import sin
 from sympy import cos
 from sympy import solve
+import matplotlib
 from sympy.plotting import plot
+#import matplotlib.pyplot as mpl
+from sympy.plotting.plot import List2DSeries
+
 import seaborn as sns
 
 from contextlib import contextmanager
@@ -742,18 +747,22 @@ def acomodaNotacion(expresion):
 
 salida = open("/tmp/solucion_bddd649e-0a73-466c-9dd9-21569133d5dc.txt","w")
 x = symbols('x')
-expr = parse_latex(r"2x^3+3x^2-36x-2").subs({Symbol('pi'): pi})
+expr = parse_latex(r"x^3-27x+1").subs({Symbol('pi'): pi})
 salida.write("Obtener: $$%s$$<br><br>" % latex(Derivative(expr, x)))
 solucion = print_html_steps(expr, x)
 solucion = acomodaNotacion(solucion)
 salida.write(solucion)
 sns.set()
 sns.set_style("whitegrid", {'grid.linestyle': '--'})
-grafica = plot(expr, show=False, line_color='red')
-xmin=0
-xmax=0
-ymin=0
-ymax=0
+grafica = plot(expr, show=False, line_color='blue',backend='matplotlib')
+grafica.xlim=[-100,100]
+xmin=1000
+xmax=-1000
+ymin=1000
+ymax=-1000
+anotaciones = []
+puntosX = []
+puntosY = []
 derivada = Derivative(expr)
 derivada = derivada.doit()
 anula = solve(derivada, x)
@@ -775,14 +784,42 @@ for x_0 in anula:
        ymax = y+1
     if y < ymin:
        ymin = y-1
-    tangente = plot(y,show=False,line_color='blue')
-    grafica.append(tangente[0])
+    tangente = plot((y,(x,-80,80)), show=False, line_color='red')
+    anotaciones.append({'xy': (x_0+.1, y+.5), 'text': "P"+str(n)+"("+str(float(x_0))+","+str(float(y))+")"})
+    puntosX.append(x_0)
+    puntosY.append(y)
+    grafica.extend(tangente)
     n = n+1
 
-salida.write(solucion)
+intervalox = xmax-xmin
+centrox = (xmax + xmin)/2
+centroy = (ymax + ymin)/2
+intervalo = ymax-ymin
+if intervalox > intervalo:
+    intervalo = intervalox
+intervalo = intervalo*6/10
+xmax=centrox+intervalo
+xmin=centrox-intervalo
+ymax=centroy+intervalo
+ymin=centroy-intervalo
+
 grafica.xlim = (float(xmin), float(xmax))
 grafica.ylim = (float(ymin), float(ymax))
-grafica.title = latex(expr)
+grafica.annotations = anotaciones
+grafica.title = "$y="+latex(simplify(expr))+"$"
+grafica.ylabel = False
+#grafica.legend = True
+salida.write(solucion)
+salida.write("\n")
 grafica.save('/home/yan/graph.svg')
-salida.write("<br>Grafica<br>")
+aSVG = open('/home/yan/graph.svg','r')
+svgLines = aSVG.readlines()
+iniciaSVG=False
+for linea in svgLines:
+    if "<SVG" in linea or "<svg" in linea:
+        iniciaSVG = True
+    if iniciaSVG:
+        salida.write(linea)
+aSVG.close()
+#salida.write("<br>Grafica<br>")
 salida.close()
