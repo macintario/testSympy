@@ -742,84 +742,61 @@ def acomodaNotacion(expresion):
                                 "\\frac{d}{d x}( g{\\left(x \\right)})")
     return expresion
 
-
 ##MAIN##
 
-salida = open("/tmp/solucion_bddd649e-0a73-466c-9dd9-21569133d5dc.txt","w")
+salida = open("/tmp/solucion_28d36c18-7985-42e7-bce1-11babf379715.txt","w")
 x = symbols('x')
-expr = parse_latex(r"x^3-27x+1").subs({Symbol('pi'): pi})
+expr = parse_latex(r"2x^3+12x^2-30x-1").subs({Symbol('pi'): pi})
 salida.write("Obtener: $$%s$$<br><br>" % latex(Derivative(expr, x)))
 solucion = print_html_steps(expr, x)
 solucion = acomodaNotacion(solucion)
 salida.write(solucion)
-sns.set()
-sns.set_style("whitegrid", {'grid.linestyle': '--'})
-grafica = plot(expr, show=False, line_color='blue',backend='matplotlib')
-grafica.xlim=[-100,100]
-xmin=1000
-xmax=-1000
-ymin=1000
-ymax=-1000
-anotaciones = []
-puntosX = []
-puntosY = []
 derivada = Derivative(expr)
 derivada = derivada.doit()
 anula = solve(derivada, x)
+puntos = []
+xmin,xmax = 0,0
+ymin,ymax = 0,0
 solucion = "Resolviendo $$%s=0$$ obtenemos las raices<br/>" % (latex(derivada))
 n = 1
 for x_0 in anula:
     solucion = solucion + "$$x_%s=%s$$ <br/>" % (n, latex(x_0))
-    if x_0 > xmax:
-       xmax = x_0+1
-    if x_0 < xmin:
-       xmin = x_0-1
     n = n+1
 n = 1
 solucion = solucion+"Sustituyendo en $$%s$$, se obtienen los puntos:<br/>"%(latex(expr))
 for x_0 in anula:
     y = expr.subs(x, x_0)
-    solucion = solucion + "$$P_%s(%s,%s)$$<br/>" % (n,latex(x_0), latex(y))
+    puntos.append([x_0,y])
+    if x_0 > xmax:
+        xmax=x_0
+    if x_0 < xmin:
+        xmin=x_0
     if y > ymax:
-       ymax = y+1
+        ymax=y
     if y < ymin:
-       ymin = y-1
-    tangente = plot((y,(x,-80,80)), show=False, line_color='red')
-    anotaciones.append({'xy': (x_0+.1, y+.5), 'text': "P"+str(n)+"("+str(float(x_0))+","+str(float(y))+")"})
-    puntosX.append(x_0)
-    puntosY.append(y)
-    grafica.extend(tangente)
+        ymin=y
+    solucion = solucion + "$$P_%s(%s,%s)$$<br/>" % (n,latex(x_0), latex(y))
     n = n+1
-
-intervalox = xmax-xmin
+if (xmax-xmin) < (ymax-ymin):
+    intervalo = ymax-ymin
+else:
+    intervalo = xmax-xmin
+intervalo=round(intervalo*6/10)+1
 centrox = (xmax + xmin)/2
 centroy = (ymax + ymin)/2
-intervalo = ymax-ymin
-if intervalox > intervalo:
-    intervalo = intervalox
-intervalo = intervalo*6/10
-xmax=centrox+intervalo
-xmin=centrox-intervalo
-ymax=centroy+intervalo
-ymin=centroy-intervalo
-
-grafica.xlim = (float(xmin), float(xmax))
-grafica.ylim = (float(ymin), float(ymax))
-grafica.annotations = anotaciones
-grafica.title = "$y="+latex(simplify(expr))+"$"
-grafica.ylabel = False
-#grafica.legend = True
+xmin = centrox-intervalo
+xmax = centrox+intervalo
+ymin = centroy-intervalo
+ymax = centroy+intervalo
 salida.write(solucion)
-salida.write("\n")
-grafica.save('/home/yan/graph.svg')
-aSVG = open('/home/yan/graph.svg','r')
-svgLines = aSVG.readlines()
-iniciaSVG=False
-for linea in svgLines:
-    if "<SVG" in linea or "<svg" in linea:
-        iniciaSVG = True
-    if iniciaSVG:
-        salida.write(linea)
-aSVG.close()
-#salida.write("<br>Grafica<br>")
+salida.write('\n<jsxgraph width="600" height="500">\n')
+funcion = 'function f(x) { return '+str(expr)+'; }\n '
+salida.write(funcion)
+
+salida.write('var brd = JXG.JSXGraph.initBoard(BOARDID, {boundingbox:['+str(xmin)+','+str(ymax)+','+str(xmax)+','+str(ymin)+'], axis:true});\n')
+for xt, yt in puntos:
+    salida.write('var p = brd.create("point", ['+str(xt)+','+str(yt)+'],{fixed:true});\n')
+    salida.write('var l = brd.create("functiongraph",[function(x){ return '+str(yt)+';}]);\n')
+salida.write('var c = brd.create("functiongraph", f, {strokewidth:2});\n')
+salida.write('</jsxgraph>\n')
 salida.close()
